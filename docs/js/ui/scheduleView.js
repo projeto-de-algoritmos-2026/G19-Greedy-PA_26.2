@@ -7,21 +7,51 @@
 
 import { DAY_LABELS, DAYS_OF_WEEK, minutesToTime, timeToMinutes, formatDuration } from '../core/time.js';
 
-/**
- * Paleta de cores padrão vibrantes e contrastantes para matérias.
- */
 export const DEFAULT_COLORS = [
-  '#6366f1', // Indigo
-  '#06b6d4', // Cyan
-  '#10b981', // Emerald
-  '#f59e0b', // Amber
-  '#ec4899', // Pink
-  '#8b5cf6', // Purple
-  '#3b82f6', // Blue
-  '#14b8a6', // Teal
-  '#f97316', // Orange
-  '#ef4444'  // Rose
+  '#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#14b8a6', '#f97316', '#ef4444'
 ];
+
+const DAY_ALIASES = {
+  monday: 'segunda',
+  mon: 'segunda',
+  seg: 'segunda',
+  tuesday: 'terca',
+  tue: 'terca',
+  terça: 'terca',
+  ter: 'terca',
+  wednesday: 'quarta',
+  wed: 'quarta',
+  qua: 'quarta',
+  thursday: 'quinta',
+  thu: 'quinta',
+  qui: 'quinta',
+  friday: 'sexta',
+  fri: 'sexta',
+  sex: 'sexta',
+  saturday: 'sabado',
+  sat: 'sabado',
+  sábado: 'sabado',
+  sab: 'sabado',
+  sunday: 'domingo',
+  sun: 'domingo',
+  dom: 'domingo'
+};
+
+function normalizeDay(day) {
+  if (!day) return 'segunda';
+  const clean = String(day).toLowerCase().trim();
+  return DAY_ALIASES[clean] || clean;
+}
+
+function formatTimeValue(val, fallback = '08:00') {
+  if (typeof val === 'number') {
+    return minutesToTime(val);
+  }
+  if (typeof val === 'string' && val.trim() !== '') {
+    return val.trim();
+  }
+  return fallback;
+}
 
 /**
  * Renderiza os cards de métricas (horas alocadas, pendentes, aproveitamento).
@@ -111,7 +141,6 @@ export function renderPendingSessions(container, unallocated = [], subjectsMap =
   const itemsHtml = unallocated.map(session => {
     const subject = subjectsMap.get(session.subjectId) || {};
     const color = session.color || subject.color || '#ef4444';
-    const urgency = session.urgencyFactors || {};
 
     let urgencyTag = '';
     if (session.deadlineDays && session.deadlineDays <= 7) {
@@ -123,14 +152,15 @@ export function renderPendingSessions(container, unallocated = [], subjectsMap =
         <div class="pending-session-header">
           <span class="pending-session-name">
             <span class="color-dot" style="background-color: ${color}"></span>
-            ${escapeHtml(session.subjectName || subject.name || 'Matéria')}
+            ${escapeHtml(session.subjectName || session.title || subject.name || 'Matéria')}
           </span>
-          <span class="badge badge-neutral">${session.durationMinutes || 60} min</span>
+          <span class="badge badge-neutral">${session.durationMinutes || session.duration || 60} min</span>
           ${urgencyTag}
         </div>
         <div class="pending-session-detail">
           <span>Sessão ${session.sessionIndex || 1} de ${session.totalSessions || 1}</span>
-          <span class="text-muted">• Prioridade calculada: ${session.priority || 0} pts</span>
+          <span class="text-muted">• Prioridade: ${session.priority || 0} pts</span>
+          ${session.reason ? `<span class="badge badge-neutral">${escapeHtml(session.reason)}</span>` : ''}
         </div>
       </div>
     `;
@@ -154,16 +184,14 @@ export function renderPendingSessions(container, unallocated = [], subjectsMap =
 
 /**
  * Renderiza o calendário/grade semanal com as sessões alocadas por dia da semana.
- * Suporta tanto visualização semanal em grade (desktop) quanto blocos cronológicos por dia (mobile-friendly).
- *
  * @param {HTMLElement} container - Elemento HTML container.
- * @param {Array<Object>} scheduledSessions - Sessões alocadas (com day, start, end, etc.).
+ * @param {Array<Object>} scheduledSessions - Sessões alocadas.
  * @param {Object} [context={}] - Contexto adicional com matérias, compromissos e disponibilidades.
  */
 export function renderScheduleGrid(container, scheduledSessions = [], context = {}) {
   if (!container) return;
 
-  const { subjects = [], commitments = [], reservations = [], availability = [] } = context;
+  const { subjects = [], commitments = [], reservations = [] } = context;
   const subjectsMap = new Map(subjects.map(s => [s.id, s]));
 
   // Agrupa itens por dia da semana
@@ -172,17 +200,22 @@ export function renderScheduleGrid(container, scheduledSessions = [], context = 
     dayBuckets[day] = [];
   }
 
-  // 1. Adiciona sessões de estudo agendadas
+  // 1. Sessões de estudo agendadas
   for (const session of scheduledSessions) {
-    const day = (session.day || '').toLowerCase();
+    const rawDay = session.day || '';
+    const day = normalizeDay(rawDay);
+
     if (dayBuckets[day]) {
       const subject = subjectsMap.get(session.subjectId) || {};
+      const startTime = formatTimeValue(session.start !== undefined ? session.start : session.startTime, '08:00');
+      const endTime = formatTimeValue(session.end !== undefined ? session.end : session.endTime, '09:00');
+
       dayBuckets[day].push({
         type: 'study',
         id: session.id,
-        title: session.subjectName || subject.name || 'Estudo',
-        startTime: session.start || session.startTime || '08:00',
-        endTime: session.end || session.endTime || '09:00',
+        title: session.subjectName || session.title || subject.name || 'Estudo',
+        startTime,
+        endTime,
         color: session.color || subject.color || '#6366f1',
         sessionIndex: session.sessionIndex,
         totalSessions: session.totalSessions,
@@ -192,32 +225,32 @@ export function renderScheduleGrid(container, scheduledSessions = [], context = 
     }
   }
 
-  // 2. Adiciona compromissos fixos cadastrados
+  // 2. Compromissos fixos cadastrados
   for (const comm of commitments) {
-    const day = (comm.day || '').toLowerCase();
+    const day = normalizeDay(comm.day);
     if (dayBuckets[day]) {
       dayBuckets[day].push({
         type: 'commitment',
         id: comm.id,
         title: comm.title || 'Compromisso',
-        startTime: comm.startTime,
-        endTime: comm.endTime,
-        color: '#64748b' // Slate/cinza neutro
+        startTime: formatTimeValue(comm.startTime, '14:00'),
+        endTime: formatTimeValue(comm.endTime, '16:00'),
+        color: '#64748b'
       });
     }
   }
 
-  // 3. Adiciona reservas de estudo fixas
+  // 3. Reservas de estudo fixas
   for (const res of reservations) {
-    const day = (res.day || '').toLowerCase();
+    const day = normalizeDay(res.day);
     if (dayBuckets[day]) {
       const subject = subjectsMap.get(res.subjectId) || {};
       dayBuckets[day].push({
         type: 'reservation',
         id: res.id,
         title: `Reserva: ${subject.name || 'Estudo Fixo'}`,
-        startTime: res.startTime,
-        endTime: res.endTime,
+        startTime: formatTimeValue(res.startTime, '19:00'),
+        endTime: formatTimeValue(res.endTime, '20:00'),
         color: subject.color || '#4f46e5'
       });
     }
@@ -225,7 +258,7 @@ export function renderScheduleGrid(container, scheduledSessions = [], context = 
 
   // Ordena cronologicamente os itens de cada dia por horário de início
   for (const day of DAYS_OF_WEEK) {
-    dayBuckets[day].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+    dayBuckets[day].sort((a, b) => timeToMinutesSafe(a.startTime) - timeToMinutesSafe(b.startTime));
   }
 
   // Monta o HTML do calendário semanal
@@ -248,7 +281,6 @@ export function renderScheduleGrid(container, scheduledSessions = [], context = 
       `;
     } else {
       itemsHtml = dayItems.map(item => {
-        const isStudy = item.type === 'study';
         const isCommitment = item.type === 'commitment';
         const isReservation = item.type === 'reservation';
 
@@ -305,7 +337,7 @@ export function renderScheduleGrid(container, scheduledSessions = [], context = 
 }
 
 /**
- * Renderiza as listas de itens cadastrados nos formulários (chips/tabelas com botão de remover).
+ * Renderiza as listas de itens cadastrados nos formulários.
  */
 export function renderRegisteredItems({
   subjectsContainer,
@@ -313,7 +345,7 @@ export function renderRegisteredItems({
   assessmentsContainer,
   commitmentsContainer,
   reservationsContainer
-}, data = {}, onDeleteCallback = () => {}) {
+}, data = {}) {
   // Matérias
   if (subjectsContainer) {
     const subjects = data.subjects || [];
@@ -338,13 +370,19 @@ export function renderRegisteredItems({
     if (avail.length === 0) {
       availabilityContainer.innerHTML = '<p class="empty-list-hint">Nenhum horário livre cadastrado.</p>';
     } else {
-      availabilityContainer.innerHTML = avail.map(a => `
-        <div class="chip chip-availability">
-          <span class="chip-name">${DAY_LABELS[a.day] || a.day}: ${a.startTime} às ${a.endTime}</span>
-          <span class="chip-badge">${formatDuration(a.durationMinutes || getDurationMinutesSafe(a.startTime, a.endTime))}</span>
-          <button type="button" class="btn-chip-delete" data-action="delete-availability" data-id="${a.id}" title="Remover horário">&times;</button>
-        </div>
-      `).join('');
+      availabilityContainer.innerHTML = avail.map(a => {
+        const start = formatTimeValue(a.startTime || a.start, '08:00');
+        const end = formatTimeValue(a.endTime || a.end, '12:00');
+        const dayLabel = DAY_LABELS[normalizeDay(a.day)] || a.day;
+        const dur = a.durationMinutes || getDurationMinutesSafe(start, end);
+        return `
+          <div class="chip chip-availability">
+            <span class="chip-name">${dayLabel}: ${start} às ${end}</span>
+            <span class="chip-badge">${formatDuration(dur)}</span>
+            <button type="button" class="btn-chip-delete" data-action="delete-availability" data-id="${a.id}" title="Remover horário">&times;</button>
+          </div>
+        `;
+      }).join('');
     }
   }
 
@@ -378,12 +416,17 @@ export function renderRegisteredItems({
     if (comm.length === 0) {
       commitmentsContainer.innerHTML = '<p class="empty-list-hint">Nenhum compromisso fixo cadastrado.</p>';
     } else {
-      commitmentsContainer.innerHTML = comm.map(c => `
-        <div class="chip chip-commitment">
-          <span class="chip-name">${escapeHtml(c.title)} (${DAY_LABELS[c.day] || c.day}: ${c.startTime} - ${c.endTime})</span>
-          <button type="button" class="btn-chip-delete" data-action="delete-commitment" data-id="${c.id}" title="Remover">&times;</button>
-        </div>
-      `).join('');
+      commitmentsContainer.innerHTML = comm.map(c => {
+        const start = formatTimeValue(c.startTime, '14:00');
+        const end = formatTimeValue(c.endTime, '16:00');
+        const dayLabel = DAY_LABELS[normalizeDay(c.day)] || c.day;
+        return `
+          <div class="chip chip-commitment">
+            <span class="chip-name">${escapeHtml(c.title)} (${dayLabel}: ${start} - ${end})</span>
+            <button type="button" class="btn-chip-delete" data-action="delete-commitment" data-id="${c.id}" title="Remover">&times;</button>
+          </div>
+        `;
+      }).join('');
     }
   }
 
@@ -396,9 +439,12 @@ export function renderRegisteredItems({
     } else {
       reservationsContainer.innerHTML = res.map(r => {
         const subj = subjectsMap.get(r.subjectId) || {};
+        const start = formatTimeValue(r.startTime, '19:00');
+        const end = formatTimeValue(r.endTime, '20:00');
+        const dayLabel = DAY_LABELS[normalizeDay(r.day)] || r.day;
         return `
           <div class="chip chip-reservation" style="border-left-color: ${subj.color || '#6366f1'}">
-            <span class="chip-name">Reserva: ${escapeHtml(subj.name || 'Matéria')} (${DAY_LABELS[r.day] || r.day}: ${r.startTime} - ${r.endTime})</span>
+            <span class="chip-name">Reserva: ${escapeHtml(subj.name || 'Matéria')} (${dayLabel}: ${start} - ${end})</span>
             <button type="button" class="btn-chip-delete" data-action="delete-reservation" data-id="${r.id}" title="Remover">&times;</button>
           </div>
         `;
@@ -407,13 +453,18 @@ export function renderRegisteredItems({
   }
 }
 
-/**
- * Utilitário para verificar se o dia corresponde a hoje na semana local.
- */
 function isDayToday(dayKey) {
-  const jsDay = new Date().getDay(); // 0 domingo, 1 segunda, ..., 6 sábado
+  const jsDay = new Date().getDay();
   const mapping = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
   return mapping[jsDay] === dayKey;
+}
+
+function timeToMinutesSafe(str) {
+  try {
+    return timeToMinutes(str);
+  } catch {
+    return 0;
+  }
 }
 
 function getDurationMinutesSafe(start, end) {

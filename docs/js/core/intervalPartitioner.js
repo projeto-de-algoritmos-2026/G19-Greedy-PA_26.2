@@ -1,74 +1,43 @@
-<<<<<<< HEAD
-/**
- * @fileoverview Interval Partitioning (Módulo atribuído à Pessoa 2).
- * Responsável por alocar sessões em blocos de tempo livres sem sobreposição utilizando MinHeap.
- * Este arquivo serve como contrato de integração e stub inicial para os testes da Pessoa 1.
- */
-
-/**
- * Particiona as sessões nos blocos livres disponíveis.
- * @param {Array<Object>} sessions - Sessões selecionadas para agendamento.
- * @param {Array<Object>} freeBlocks - Blocos de tempo livre disponíveis.
- * @returns {{ scheduled: Array<Object>, unallocated: Array<Object> }}
- */
-export function partitionSessions(sessions = [], freeBlocks = []) {
-  // Stub inicial para integração e compatibilidade com a Pessoa 2.
-  // A Pessoa 2 implementará este algoritmo com MinHeap.
-  return {
-    scheduled: [],
-    unallocated: [...sessions]
-  };
-}
-=======
 import { MinHeap } from "../utils/minHeap.js";
 
 /**
  * Distribui sessões de estudo pelos blocos livres,
- * sem permitir sobreposição.
+ * sem permitir sobreposição, utilizando MinHeap.
  *
- * @param {Array} sessions
- * Sessões que precisam ser alocadas.
- *
- * Exemplo:
- * [
- *   {
- *     id: "calc2-1",
- *     subjectId: "calc2",
- *     title: "Estudo de Cálculo 2",
- *     duration: 60,
- *     priority: 2
- *   }
- * ]
- *
- * @param {Array} freeBlocks
- * Blocos de tempo disponíveis.
- *
- * Exemplo:
- * [
- *   {
- *     day: "monday",
- *     start: 480, // 08:00
- *     end: 900    // 15:00
- *   }
- * ]
- *
+ * @param {Array} sessions - Sessões que precisam ser alocadas.
+ * @param {Array} freeBlocks - Blocos de tempo disponíveis.
  * @returns {{
  *   scheduled: Array,
  *   unallocated: Array
  * }}
  */
-export function partitionSessions(sessions, freeBlocks) {
-  // Cria um heap que sempre retorna o bloco
-  // que fica disponível mais cedo.
+export function partitionSessions(sessions = [], freeBlocks = []) {
+  // Cria um heap que sempre retorna o bloco que fica disponível mais cedo.
   const heap = new MinHeap((a, b) => a.freeAt - b.freeAt);
 
   // Coloca cada bloco livre no heap.
   // No início, cada bloco está disponível a partir do seu início.
-  for (const block of freeBlocks) {
-    heap.push({
-      block,
-      freeAt: block.start
-    });
+  for (const rawBlock of freeBlocks) {
+    const start = typeof rawBlock.start === "number"
+      ? rawBlock.start
+      : (typeof rawBlock.startTime === "string" ? parseTimeToMin(rawBlock.startTime) : 0);
+
+    const end = typeof rawBlock.end === "number"
+      ? rawBlock.end
+      : (typeof rawBlock.endTime === "string" ? parseTimeToMin(rawBlock.endTime) : 0);
+
+    if (start < end) {
+      const block = {
+        ...rawBlock,
+        start,
+        end
+      };
+
+      heap.push({
+        block,
+        freeAt: block.start
+      });
+    }
   }
 
   // Aqui ficarão as sessões que conseguiram ser alocadas.
@@ -79,52 +48,60 @@ export function partitionSessions(sessions, freeBlocks) {
 
   // Percorre as sessões na ordem em que foram recebidas.
   for (const session of sessions) {
-    // Pega o bloco que fica livre mais cedo.
-    const entry = heap.pop();
+    const sessionDuration = session.duration || session.durationMinutes || 60;
+    let allocated = false;
+    const skippedEntries = [];
 
-    // Se não existir nenhum bloco livre,
-    // a sessão não pode ser alocada.
-    if (!entry) {
-      unallocated.push({
-        ...session,
-        reason: "SEM_BLOCO_LIVRE"
-      });
+    // Tenta alocar no bloco que fica livre mais cedo
+    while (!heap.isEmpty()) {
+      const entry = heap.pop();
+      const start = entry.freeAt;
+      const end = start + sessionDuration;
 
-      continue;
+      // Verifica se a sessão cabe dentro do bloco
+      if (end <= entry.block.end) {
+        // Cria a sessão final com dia, início e fim
+        scheduled.push({
+          ...session,
+          duration: sessionDuration,
+          durationMinutes: sessionDuration,
+          day: entry.block.day,
+          start,
+          end,
+          status: "SCHEDULED"
+        });
+
+        // O mesmo bloco continua disponível se ainda tiver tempo sobrando
+        if (end < entry.block.end) {
+          heap.push({
+            block: entry.block,
+            freeAt: end
+          });
+        }
+
+        allocated = true;
+        break;
+      } else {
+        // O bloco não suportou esta sessão.
+        // Se ainda tem algum espaço que possa caber uma sessão menor futura, preserva:
+        if (entry.freeAt < entry.block.end) {
+          skippedEntries.push(entry);
+        }
+      }
     }
 
-    // A sessão começa no primeiro momento livre do bloco.
-    const start = entry.freeAt;
+    // Devolve os blocos não utilizados de volta ao heap
+    for (const skipped of skippedEntries) {
+      heap.push(skipped);
+    }
 
-    // A sessão termina depois da duração dela.
-    const end = start + session.duration;
-
-    // Verifica se a sessão cabe dentro do bloco.
-    if (end <= entry.block.end) {
-      // Cria a sessão final com dia, início e fim.
-      scheduled.push({
-        ...session,
-        day: entry.block.day,
-        start,
-        end,
-        status: "SCHEDULED"
-      });
-
-      // O mesmo bloco continua disponível,
-      // mas agora a partir do fim da sessão.
-      heap.push({
-        block: entry.block,
-        freeAt: end
-      });
-    } else {
-      // A sessão não cabe no bloco disponível.
+    if (!allocated) {
       unallocated.push({
         ...session,
+        duration: sessionDuration,
+        durationMinutes: sessionDuration,
         reason: "BLOCO_PEQUENO_DEMAIS"
       });
-
-      // Devolve o bloco ao heap sem alteração.
-      heap.push(entry);
     }
   }
 
@@ -133,4 +110,9 @@ export function partitionSessions(sessions, freeBlocks) {
     unallocated
   };
 }
->>>>>>> 7c4b426442b6a5e23a3b3a0f3de4a841ed2999a0
+
+function parseTimeToMin(timeStr) {
+  if (!timeStr || typeof timeStr !== "string") return 0;
+  const parts = timeStr.trim().split(":");
+  return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+}
