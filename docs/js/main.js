@@ -182,32 +182,32 @@ export async function handleImportFile(file) {
 /**
  * Carrega dados iniciais de demonstração caso o usuário não tenha nada cadastrado.
  */
-function loadDefaultDemoData() {
-  const demoData = {
-    subjects: [
-      { id: 'subj-1', name: 'Cálculo 2', weeklyHours: 3, difficulty: 5, color: '#6366f1' },
-      { id: 'subj-2', name: 'Algoritmos e Estruturas', weeklyHours: 3, difficulty: 4, color: '#06b6d4' },
-      { id: 'subj-3', name: 'Banco de Dados', weeklyHours: 2, difficulty: 3, color: '#10b981' }
-    ],
-    availability: [
-      { id: 'avail-1', day: 'segunda', startTime: '08:00', endTime: '11:00', durationMinutes: 180 },
-      { id: 'avail-2', day: 'terca', startTime: '14:00', endTime: '17:00', durationMinutes: 180 },
-      { id: 'avail-3', day: 'quarta', startTime: '08:00', endTime: '11:00', durationMinutes: 180 },
-      { id: 'avail-4', day: 'quinta', startTime: '14:00', endTime: '16:00', durationMinutes: 120 }
-    ],
-    assessments: [
-      { id: 'ass-1', subjectId: 'subj-1', type: 'exam', title: 'Prova P1 de Cálculo', daysUntil: 3, weight: 5 },
-      { id: 'ass-2', subjectId: 'subj-2', type: 'assignment', title: 'Trabalho de Grafos', daysUntil: 6, weight: 4 }
-    ],
-    commitments: [
-      { id: 'comm-1', title: 'Aula de Laboratório', day: 'segunda', startTime: '14:00', endTime: '16:00', durationMinutes: 120 }
-    ],
-    reservations: []
-  };
+// function loadDefaultDemoData() {
+//   const demoData = {
+//     subjects: [
+//       { id: 'subj-1', name: 'Cálculo 2', weeklyHours: 3, difficulty: 5, color: '#6366f1' },
+//       { id: 'subj-2', name: 'Algoritmos e Estruturas', weeklyHours: 3, difficulty: 4, color: '#06b6d4' },
+//       { id: 'subj-3', name: 'Banco de Dados', weeklyHours: 2, difficulty: 3, color: '#10b981' }
+//     ],
+//     availability: [
+//       { id: 'avail-1', day: 'segunda', startTime: '08:00', endTime: '11:00', durationMinutes: 180 },
+//       { id: 'avail-2', day: 'terca', startTime: '14:00', endTime: '17:00', durationMinutes: 180 },
+//       { id: 'avail-3', day: 'quarta', startTime: '08:00', endTime: '11:00', durationMinutes: 180 },
+//       { id: 'avail-4', day: 'quinta', startTime: '14:00', endTime: '16:00', durationMinutes: 120 }
+//     ],
+//     assessments: [
+//       { id: 'ass-1', subjectId: 'subj-1', type: 'exam', title: 'Prova P1 de Cálculo', daysUntil: 3, weight: 5 },
+//       { id: 'ass-2', subjectId: 'subj-2', type: 'assignment', title: 'Trabalho de Grafos', daysUntil: 6, weight: 4 }
+//     ],
+//     commitments: [
+//       { id: 'comm-1', title: 'Aula de Laboratório', day: 'segunda', startTime: '14:00', endTime: '16:00', durationMinutes: 120 }
+//     ],
+//     reservations: []
+//   };
 
-  setFormData(demoData);
-  handleGenerateSchedule();
-}
+//   setFormData(demoData);
+//   handleGenerateSchedule();
+// }
 
 /**
  * Inicialização global da aplicação.
