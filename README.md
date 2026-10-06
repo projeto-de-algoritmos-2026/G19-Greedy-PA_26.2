@@ -23,7 +23,9 @@ Além disso, o projeto implementa o algoritmo guloso de **Compressão de Huffman
 
 ## Vídeo de Apresentação
 
-**[Vídeo de Apresentação no YouTube](https://youtu.be/SEU_LINK_AQUI)** *(Link a ser inserido)*
+[![Assistir ao vídeo de apresentação](https://img.youtube.com/vi/ttDws-fJzyA/hqdefault.jpg)](https://youtu.be/ttDws-fJzyA)
+
+LINK: https://youtu.be/ttDws-fJzyA
 
 ---
 
@@ -239,7 +241,9 @@ Os testes cobrem:
 
 ## Publicação no GitHub Pages
 
-O projeto foi projetado para rodar nativamente no **GitHub Pages**, pois toda a lógica de algoritmos e renderização é executada no cliente (*client-side*):
+O projeto pode ser executado diretamente pelo **GitHub Pages**: depois da publicação, basta abrir a URL do Pages do repositório para usar a aplicação no navegador, sem instalar nada e sem configurar um servidor local. Toda a lógica de algoritmos e renderização roda no próprio navegador (*client-side*); não é necessário back-end.
+
+Para abrir a aplicação publicada, acesse **Settings** > **Pages** no repositório e use a URL exibida na página. Se o Pages ainda não estiver configurado, siga os passos abaixo:
 
 1. No repositório no GitHub, vá em **Settings** > **Pages**.
 2. Na seção **Build and deployment**:
