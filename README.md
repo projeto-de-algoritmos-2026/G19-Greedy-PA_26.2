@@ -86,6 +86,11 @@ O fluxo de execução do sistema é estruturado em etapas bem definidas:
 
 ---
 
+Imagem do projeto no git pages:
+
+
+![Captura do StudyScheduler](<Screenshot 2026-10-05 235553.png>)
+
 ## Algoritmos Implementados
 
 ### 1. Interval Scheduling & Priorização Gulosa
